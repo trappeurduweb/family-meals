@@ -1,0 +1,189 @@
+:root {
+  --bg: #f5f2ec;
+  --card-bg: #ffffff;
+  --text: #222018;
+  --text-muted: #6b6558;
+  --primary: #217858;
+  --primary-dark: #17513c;
+  --danger: #b3432b;
+  --border: #e4ddcf;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  padding: calc(12px + var(--safe-top)) 16px calc(80px + var(--safe-bottom));
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.screen h1 {
+  font-size: 22px;
+  margin: 4px 0 16px;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  font-size: 16px;
+  margin: 0 0 8px;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 10px 0 4px;
+}
+
+.text-input, select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 15px;
+  background: #fff;
+  margin-bottom: 6px;
+}
+
+.text-input.small { width: auto; flex: 1; }
+
+.btn-primary, .btn-secondary, .btn-danger, .btn-link, .btn-link-danger {
+  display: inline-block;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  text-align: center;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  width: 100%;
+  margin-top: 8px;
+}
+.btn-primary:active { background: var(--primary-dark); }
+
+.btn-large { padding: 16px; font-size: 16px; }
+
+.btn-secondary {
+  background: #eef1ec;
+  color: var(--text);
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.btn-danger {
+  background: #fbe9e4;
+  color: var(--danger);
+  width: 100%;
+  margin-top: 8px;
+}
+
+.btn-link {
+  background: none;
+  color: var(--primary);
+  padding: 8px 0;
+}
+
+.btn-link-danger {
+  background: none;
+  color: var(--danger);
+  padding: 4px 0;
+  font-size: 13px;
+}
+
+.member-row, .recipe-row, .item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.item-row { flex-wrap: nowrap; }
+
+.pattern-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pattern-table th, .pattern-table td { border: 1px solid var(--border); padding: 6px; vertical-align: top; }
+.member-check { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 4px; }
+
+.badge {
+  background: #eef1ec;
+  color: var(--primary-dark);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+.photo-preview { margin: 8px 0; }
+.preview-img { width: 100%; max-height: 260px; object-fit: cover; border-radius: 10px; }
+
+.shortcuts a { display: block; }
+
+.slot-preview { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+
+.menu-grid { display: flex; flex-direction: column; gap: 12px; }
+.menu-day { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 16px; }
+.menu-day h3 { margin: 0 0 8px; font-size: 15px; }
+.menu-slot { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.meal-label { width: 70px; font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
+.menu-slot .text-input { flex: 1; margin-bottom: 0; min-width: 120px; }
+
+.shopping-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+.shopping-item.checked { color: var(--text-muted); text-decoration: line-through; }
+
+.loading { padding: 40px 0; text-align: center; color: var(--text-muted); }
+
+#tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-bottom);
+  z-index: 10;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0 6px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 11px;
+}
+
+.tab.active { color: var(--primary); }
+.tab-icon { font-size: 20px; }
