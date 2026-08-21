@@ -1,5 +1,5 @@
 import { h, mount } from "../utils.js";
-import { dbGetAll, dbPut, dbDelete } from "../db.js";
+import { dbGetAll, dbPut, dbDelete } from "../cloud.js";
 
 function ingredientsToText(ingredients) {
   return (ingredients || []).map((i) => `${i.name} (${i.qty || ""}${i.unit || ""})`).join(", ");

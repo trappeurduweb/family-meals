@@ -1,5 +1,5 @@
 import { h, mount, AISLES, AISLE_LABELS } from "../utils.js";
-import { dbGet, dbPut } from "../db.js";
+import { dbGet, dbPut } from "../cloud.js";
 
 export async function render(container) {
   const list = await dbGet("shoppingList", "current");

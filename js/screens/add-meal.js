@@ -1,6 +1,6 @@
 import { h, mount } from "../utils.js";
 import { analyzeMealPhoto, fileToBase64 } from "../claude.js";
-import { dbGetAll, dbPut } from "../db.js";
+import { dbGetAll, dbPut } from "../cloud.js";
 
 export async function render(container) {
   const fileInput = h("input", { type: "file", accept: "image/*", capture: "environment" });

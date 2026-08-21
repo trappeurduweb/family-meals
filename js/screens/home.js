@@ -1,5 +1,5 @@
 import { h, mount, DAY_LABELS, MEAL_LABELS } from "../utils.js";
-import { dbGetAll, dbGet, dbPut } from "../db.js";
+import { dbGetAll, dbGet, dbPut } from "../cloud.js";
 import { analyzeFridgePhoto, generateWeeklyMenu, fileToBase64 } from "../claude.js";
 
 async function renderCurrentMenuPreview(container) {

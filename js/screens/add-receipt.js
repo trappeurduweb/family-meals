@@ -1,6 +1,6 @@
 import { h, mount, AISLES, AISLE_LABELS } from "../utils.js";
 import { analyzeReceiptPhoto, fileToBase64 } from "../claude.js";
-import { dbPut } from "../db.js";
+import { dbPut } from "../cloud.js";
 
 export async function render(container) {
   const fileInput = h("input", { type: "file", accept: "image/*", capture: "environment" });

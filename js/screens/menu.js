@@ -1,5 +1,5 @@
 import { h, mount, DAYS, DAY_LABELS, MEALS, MEAL_LABELS } from "../utils.js";
-import { dbGet, dbPut } from "../db.js";
+import { dbGet, dbPut } from "../cloud.js";
 
 function aggregateShoppingList(slots) {
   const byKey = new Map();

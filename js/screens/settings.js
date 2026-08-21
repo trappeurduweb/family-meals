@@ -1,5 +1,6 @@
 import { h, mount } from "../utils.js";
 import { getSetting, setSetting, dbClearAll } from "../db.js";
+import { dbClearAllCloud } from "../cloud.js";
 
 export async function render(container) {
   const currentKey = (await getSetting("apiKey")) || "";
@@ -26,18 +27,32 @@ export async function render(container) {
     "Enregistrer la clé"
   );
 
-  const resetBtn = h(
+  const resetLocalBtn = h(
     "button",
     {
       class: "btn-danger",
       onclick: async () => {
-        if (!confirm("Supprimer toutes les données locales (foyer, recettes, historique, menu) ? La clé API sera aussi effacée.")) return;
+        if (!confirm("Oublier la clé API Claude sur cet appareil ?")) return;
         await dbClearAll();
         location.hash = "#/settings";
         location.reload();
       },
     },
-    "Réinitialiser toutes les données locales"
+    "Oublier la clé API sur cet appareil"
+  );
+
+  const resetCloudBtn = h(
+    "button",
+    {
+      class: "btn-danger",
+      onclick: async () => {
+        if (!confirm("Effacer TOUTES les données partagées de la famille (membres, planning, recettes, historique, menu) ? Cette action est irréversible pour tout le monde.")) return;
+        await dbClearAllCloud();
+        alert("Données partagées effacées.");
+        location.hash = "#/home";
+      },
+    },
+    "Effacer toutes les données partagées de la famille"
   );
 
   mount(
@@ -46,15 +61,28 @@ export async function render(container) {
       h("h1", {}, "Réglages"),
       h("div", { class: "card" }, [
         h("h2", {}, "Clé API Claude"),
-        h("p", { class: "hint" }, "Nécessaire pour analyser tes photos (tickets, frigo, plats) et générer le menu. Stockée uniquement sur ce téléphone."),
+        h(
+          "p",
+          { class: "hint" },
+          "Nécessaire pour analyser tes photos (tickets, frigo, plats) et générer le menu. Stockée uniquement sur cet appareil — jamais envoyée à la base partagée. Chaque membre du foyer doit renseigner sa propre clé."
+        ),
         input,
         saveBtn,
         status,
       ]),
       h("div", { class: "card" }, [
-        h("h2", {}, "Données"),
-        h("p", { class: "hint" }, "Tout est stocké localement dans ce navigateur. Effacer les données Safari ou changer de téléphone fera perdre l'historique."),
-        resetBtn,
+        h("h2", {}, "Données de cet appareil"),
+        h("p", { class: "hint" }, "Concerne uniquement la clé API stockée ici."),
+        resetLocalBtn,
+      ]),
+      h("div", { class: "card" }, [
+        h("h2", {}, "Données partagées de la famille"),
+        h(
+          "p",
+          { class: "hint" },
+          "Foyer, recettes, historique d'achats et menu sont stockés en ligne (base partagée, accessible sans protection à quiconque a le lien de l'app)."
+        ),
+        resetCloudBtn,
       ]),
     ])
   );

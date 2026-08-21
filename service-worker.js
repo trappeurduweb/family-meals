@@ -1,10 +1,11 @@
-const CACHE_NAME = "menu-famille-v1";
+const CACHE_NAME = "menu-famille-v2";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",
   "./css/app.css",
   "./js/app.js",
   "./js/db.js",
+  "./js/cloud.js",
   "./js/claude.js",
   "./js/utils.js",
   "./js/screens/home.js",

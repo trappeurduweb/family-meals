@@ -10,12 +10,6 @@ function openDb() {
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains("settings")) db.createObjectStore("settings", { keyPath: "key" });
-      if (!db.objectStoreNames.contains("members")) db.createObjectStore("members", { keyPath: "id", autoIncrement: true });
-      if (!db.objectStoreNames.contains("weeklyPattern")) db.createObjectStore("weeklyPattern", { keyPath: "id" });
-      if (!db.objectStoreNames.contains("recipes")) db.createObjectStore("recipes", { keyPath: "id", autoIncrement: true });
-      if (!db.objectStoreNames.contains("purchases")) db.createObjectStore("purchases", { keyPath: "id", autoIncrement: true });
-      if (!db.objectStoreNames.contains("menu")) db.createObjectStore("menu", { keyPath: "id" });
-      if (!db.objectStoreNames.contains("shoppingList")) db.createObjectStore("shoppingList", { keyPath: "id" });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -23,20 +17,12 @@ function openDb() {
   return dbPromise;
 }
 
-function tx(storeName, mode) {
-  return openDb().then((db) => db.transaction(storeName, mode).objectStore(storeName));
+async function tx(storeName, mode) {
+  const db = await openDb();
+  return db.transaction(storeName, mode).objectStore(storeName);
 }
 
-export async function dbGetAll(storeName) {
-  const store = await tx(storeName, "readonly");
-  return new Promise((resolve, reject) => {
-    const req = store.getAll();
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-export async function dbGet(storeName, key) {
+async function dbGet(storeName, key) {
   const store = await tx(storeName, "readonly");
   return new Promise((resolve, reject) => {
     const req = store.get(key);
@@ -45,7 +31,7 @@ export async function dbGet(storeName, key) {
   });
 }
 
-export async function dbPut(storeName, value) {
+async function dbPut(storeName, value) {
   const store = await tx(storeName, "readwrite");
   return new Promise((resolve, reject) => {
     const req = store.put(value);
@@ -54,28 +40,13 @@ export async function dbPut(storeName, value) {
   });
 }
 
-export async function dbDelete(storeName, key) {
-  const store = await tx(storeName, "readwrite");
+export async function dbClearAll() {
+  const store = await tx("settings", "readwrite");
   return new Promise((resolve, reject) => {
-    const req = store.delete(key);
+    const req = store.clear();
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
   });
-}
-
-export async function dbClearAll() {
-  const db = await openDb();
-  const names = Array.from(db.objectStoreNames);
-  await Promise.all(
-    names.map(
-      (name) =>
-        new Promise((resolve, reject) => {
-          const req = db.transaction(name, "readwrite").objectStore(name).clear();
-          req.onsuccess = () => resolve();
-          req.onerror = () => reject(req.error);
-        })
-    )
-  );
 }
 
 export async function getSetting(key) {

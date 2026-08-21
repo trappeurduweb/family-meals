@@ -1,5 +1,5 @@
 import { h, mount, DAYS, DAY_LABELS, MEALS, MEAL_LABELS, DIETS, DIET_LABELS, PORTIONS, PORTION_LABELS } from "../utils.js";
-import { dbGetAll, dbPut, dbDelete, dbGet } from "../db.js";
+import { dbGetAll, dbPut, dbDelete, dbGet } from "../cloud.js";
 
 function slotKey(day, meal) {
   return `${day}_${meal}`;
