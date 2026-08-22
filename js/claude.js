@@ -3,7 +3,7 @@ import { getSetting } from "./db.js";
 const API_URL = "https://api.anthropic.com/v1/messages";
 const MODEL = "claude-sonnet-5";
 
-async function callClaude({ system, userText, imageBase64, imageMediaType }) {
+async function callClaude({ system, userText, imageBase64, imageMediaType, maxTokens = 4096 }) {
   const apiKey = await getSetting("apiKey");
   if (!apiKey) {
     throw new Error("Clé API Claude manquante. Renseigne-la dans Réglages.");
@@ -28,7 +28,12 @@ async function callClaude({ system, userText, imageBase64, imageMediaType }) {
     },
     body: JSON.stringify({
       model: MODEL,
-      max_tokens: 2048,
+      max_tokens: maxTokens,
+      // On désactive le raisonnement (thinking) : ces appels ne font que de
+      // l'extraction/génération structurée, pas besoin de réflexion étendue,
+      // et ça évite que le budget de tokens parte dans le "thinking" au lieu
+      // de la réponse JSON attendue.
+      thinking: { type: "disabled" },
       system,
       messages: [{ role: "user", content }],
     }),
@@ -41,13 +46,21 @@ async function callClaude({ system, userText, imageBase64, imageMediaType }) {
 
   const data = await res.json();
   const textBlock = data.content.find((b) => b.type === "text");
-  return textBlock ? textBlock.text : "";
+  if (!textBlock) {
+    const reason = data.stop_reason ? ` (stop_reason: ${data.stop_reason})` : "";
+    throw new Error(`Réponse IA vide${reason}. Réessaie, ou simplifie la demande.`);
+  }
+  return textBlock.text;
 }
 
 function extractJson(text) {
   const match = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
   if (!match) throw new Error("Réponse IA sans JSON exploitable : " + text);
-  return JSON.parse(match[0]);
+  try {
+    return JSON.parse(match[0]);
+  } catch (err) {
+    throw new Error("Réponse IA tronquée ou JSON invalide : " + err.message);
+  }
 }
 
 export async function analyzeReceiptPhoto(imageBase64, imageMediaType) {
@@ -104,6 +117,7 @@ export async function generateWeeklyMenu({ recipes, purchaseHistory, fridgeStock
       '"ingredients": [{"name": string, "qty": number, "unit": string, "aisle": string}]}]}. ' +
       "aisle doit être une des valeurs: fruits_legumes, cremerie, viande_poisson, epicerie, surgele, boulangerie, autre.",
     userText: JSON.stringify({ recipes, purchaseHistory, fridgeStock, weeklyPattern, members }),
+    maxTokens: 8192,
   });
   return extractJson(text);
 }
