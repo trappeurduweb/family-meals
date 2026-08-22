@@ -166,9 +166,12 @@ label {
 .menu-grid { display: flex; flex-direction: column; gap: 12px; }
 .menu-day { background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 12px 16px; }
 .menu-day h3 { margin: 0 0 8px; font-size: 15px; }
-.menu-slot { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
-.meal-label { width: 70px; font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
-.menu-slot .text-input { flex: 1; margin-bottom: 0; min-width: 120px; }
+.menu-slot { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed var(--border); }
+.menu-slot:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.meal-label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+.menu-dish-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; flex-wrap: wrap; }
+.menu-dish-row .text-input { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
+.badge-type { flex-shrink: 0; white-space: nowrap; }
 
 .shopping-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 15px; flex-wrap: nowrap; }
 .shopping-item.checked { color: var(--text-muted); text-decoration: line-through; }

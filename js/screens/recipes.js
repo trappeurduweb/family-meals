@@ -1,4 +1,4 @@
-import { h, mount } from "../utils.js";
+import { h, mount, RECIPE_TYPES, RECIPE_TYPE_LABELS } from "../utils.js";
 import { dbGetAll, dbPut, dbDelete } from "../cloud.js";
 
 function ingredientsToText(ingredients) {
@@ -15,6 +15,11 @@ function parseIngredientsInput(text) {
 
 function recipeForm(existing, onSave, onCancel) {
   const nameInput = h("input", { type: "text", class: "text-input", placeholder: "Nom de la recette", value: existing?.name || "" });
+  const typeSelect = h(
+    "select",
+    { class: "text-input" },
+    RECIPE_TYPES.map((t) => h("option", { value: t, selected: (existing?.type || "plat_complet") === t ? "selected" : null }, RECIPE_TYPE_LABELS[t]))
+  );
   const ingredientsInput = h("input", {
     type: "text",
     class: "text-input",
@@ -31,6 +36,7 @@ function recipeForm(existing, onSave, onCancel) {
         await dbPut("recipes", {
           ...(existing || { frequency: 1, source: "manual" }),
           name: nameInput.value.trim(),
+          type: typeSelect.value,
           ingredients: parseIngredientsInput(ingredientsInput.value),
         });
         onSave();
@@ -39,7 +45,16 @@ function recipeForm(existing, onSave, onCancel) {
     existing ? "Mettre à jour" : "Ajouter la recette"
   );
 
-  const children = [h("h2", {}, existing ? `Modifier "${existing.name}"` : "Ajout manuel"), nameInput, ingredientsInput, saveBtn];
+  const children = [
+    h("h2", {}, existing ? `Modifier "${existing.name}"` : "Ajout manuel"),
+    h("label", {}, "Nom"),
+    nameInput,
+    h("label", {}, "Type de plat"),
+    typeSelect,
+    h("label", {}, "Ingrédients"),
+    ingredientsInput,
+    saveBtn,
+  ];
 
   if (existing && onCancel) {
     children.push(h("button", { class: "btn-secondary", onclick: onCancel }, "Annuler"));
@@ -66,6 +81,7 @@ async function renderList(container, refresh, onEdit) {
         h("div", { class: "card" }, [
           h("div", { class: "recipe-row" }, [
             h("strong", {}, r.name),
+            h("span", { class: "badge" }, RECIPE_TYPE_LABELS[r.type] || RECIPE_TYPE_LABELS.plat_complet),
             h("span", { class: "badge" }, `×${r.frequency || 1}`),
           ]),
           h("p", { class: "hint" }, ingredientsToText(r.ingredients) || "Pas d'ingrédients détaillés"),

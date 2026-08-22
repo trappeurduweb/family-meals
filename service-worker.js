@@ -1,4 +1,4 @@
-const CACHE_NAME = "menu-famille-v7";
+const CACHE_NAME = "menu-famille-v8";
 const APP_SHELL = [
   "./index.html",
   "./manifest.json",

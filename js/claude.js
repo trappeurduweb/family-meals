@@ -81,9 +81,13 @@ export async function analyzeMealPhoto(imageBase64, imageMediaType) {
   const text = await callClaude({
     system:
       "Tu identifies un plat à partir d'une photo pour construire une bibliothèque de recettes familiales. " +
-      'Réponds UNIQUEMENT avec un JSON de la forme {"name": string, "ingredients": [{"name": string, "qty": number, "unit": string}]}. ' +
+      'Réponds UNIQUEMENT avec un JSON de la forme {"name": string, "type": "proteine"|"accompagnement"|"plat_complet", ' +
+      '"ingredients": [{"name": string, "qty": number, "unit": string}]}. ' +
+      "type vaut \"proteine\" si le plat n'est qu'une source de protéine (ex: poulet rôti seul), " +
+      "\"accompagnement\" si c'est un accompagnement seul (ex: riz, purée, salade), " +
+      "ou \"plat_complet\" si le plat se suffit à lui-même (ex: lasagnes, quiche, plat unique). " +
       "Propose une estimation raisonnable des ingrédients principaux, sans être exhaustif sur les condiments.",
-    userText: "Identifie ce plat et ses ingrédients probables.",
+    userText: "Identifie ce plat, son type, et ses ingrédients probables.",
     imageBase64,
     imageMediaType,
   });
@@ -96,11 +100,19 @@ export async function generateWeeklyMenu({ recipes, weeklyPattern, members }) {
       "Tu es un assistant qui planifie les repas d'une famille française pour la semaine (déjeuners + dîners). " +
       "Repars en priorité des recettes habituelles fournies, en tenant compte des contraintes de chaque membre " +
       "(régime, aliments non aimés, portions) et de qui est présent à chaque repas. " +
-      "Ajoute 1 à 2 suggestions de recettes nouvelles inspirées des goûts de la famille (pas seulement des variantes). " +
-      "Tu peux proposer un même plat en \"restes\" sur 2 créneaux consécutifs si cela réduit la charge de cuisine. " +
+      "Chaque recette fournie a un type: \"proteine\", \"accompagnement\" ou \"plat_complet\". " +
+      "Règle impérative de composition d'un repas: si tu choisis une recette de type \"proteine\" pour un créneau, " +
+      "tu DOIS lui associer une recette de type \"accompagnement\" dans le même créneau (et inversement). " +
+      "Un repas ne peut donc contenir soit UNE recette \"plat_complet\" seule, soit exactement UNE \"proteine\" + UNE \"accompagnement\" ensemble. " +
+      "Ajoute 1 à 2 suggestions de recettes nouvelles inspirées des goûts de la famille (pas seulement des variantes) ; " +
+      "assigne-leur un type cohérent et respecte la même règle d'association (si tu inventes une nouvelle protéine, " +
+      "associe-la à un accompagnement existant ou à un nouvel accompagnement que tu inventes aussi). " +
+      "Tu peux proposer le(s) même(s) plat(s) en \"restes\" sur 2 créneaux consécutifs si cela réduit la charge de cuisine. " +
       'Réponds UNIQUEMENT avec un JSON de la forme {"slots": [{"day": "lun".."dim", "meal": "dejeuner"|"diner", ' +
-      '"recipeName": string, "isNewSuggestion": boolean, "isLeftoverOf": string|null, ' +
+      '"dishes": [{"recipeName": string, "type": "proteine"|"accompagnement"|"plat_complet", "isNewSuggestion": boolean, "isLeftoverOf": string|null}], ' +
       '"ingredients": [{"name": string, "qty": number, "unit": string, "aisle": string}]}]}. ' +
+      "dishes contient soit 1 élément (plat_complet), soit 2 éléments (une proteine + un accompagnement). " +
+      "ingredients contient la liste combinée de tous les ingrédients nécessaires pour l'ensemble du repas de ce créneau. " +
       "aisle doit être une des valeurs: fruits_legumes, cremerie, viande_poisson, epicerie, surgele, boulangerie, autre.",
     userText: JSON.stringify({ recipes, weeklyPattern, members }),
     maxTokens: 8192,

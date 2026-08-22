@@ -1,4 +1,4 @@
-import { h, mount, DAYS, DAY_LABELS, MEALS, MEAL_LABELS } from "../utils.js";
+import { h, mount, DAYS, DAY_LABELS, MEALS, MEAL_LABELS, RECIPE_TYPE_LABELS } from "../utils.js";
 import { dbGet, dbPut } from "../cloud.js";
 
 function aggregateShoppingList(slots) {
@@ -14,6 +14,15 @@ function aggregateShoppingList(slots) {
     }
   }
   return Array.from(byKey.values());
+}
+
+function getDishes(slot) {
+  if (slot.dishes && slot.dishes.length) return slot.dishes;
+  // Compatibilité avec un menu généré avant l'ajout des types de plat.
+  if (slot.recipeName) {
+    return [{ recipeName: slot.recipeName, type: "plat_complet", isNewSuggestion: slot.isNewSuggestion, isLeftoverOf: slot.isLeftoverOf }];
+  }
+  return [];
 }
 
 export async function render(container) {
@@ -35,22 +44,30 @@ export async function render(container) {
     for (const meal of MEALS) {
       const slot = slotByKey.get(`${day}_${meal}`);
       if (!slot) continue;
-      const nameInput = h("input", {
-        type: "text",
-        class: "text-input",
-        value: slot.recipeName,
-        oninput: async (e) => {
-          slot.recipeName = e.target.value;
-          await dbPut("menu", menu);
-        },
-      });
-      dayCard.appendChild(
-        h("div", { class: "menu-slot" }, [
-          h("span", { class: "meal-label" }, MEAL_LABELS[meal]),
+
+      const dishes = getDishes(slot);
+      slot.dishes = dishes;
+
+      const dishRows = dishes.map((dish) => {
+        const nameInput = h("input", {
+          type: "text",
+          class: "text-input",
+          value: dish.recipeName,
+          oninput: async (e) => {
+            dish.recipeName = e.target.value;
+            await dbPut("menu", menu);
+          },
+        });
+        return h("div", { class: "menu-dish-row" }, [
+          h("span", { class: "badge badge-type" }, RECIPE_TYPE_LABELS[dish.type] || RECIPE_TYPE_LABELS.plat_complet),
           nameInput,
-          slot.isNewSuggestion ? h("span", { class: "badge" }, "Nouveauté") : null,
-          slot.isLeftoverOf ? h("span", { class: "badge" }, "Restes") : null,
-        ])
+          dish.isNewSuggestion ? h("span", { class: "badge" }, "Nouveauté") : null,
+          dish.isLeftoverOf ? h("span", { class: "badge" }, "Restes") : null,
+        ]);
+      });
+
+      dayCard.appendChild(
+        h("div", { class: "menu-slot" }, [h("span", { class: "meal-label" }, MEAL_LABELS[meal]), ...dishRows])
       );
     }
     grid.appendChild(dayCard);

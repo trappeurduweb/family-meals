@@ -1,4 +1,4 @@
-import { h, mount } from "../utils.js";
+import { h, mount, RECIPE_TYPES, RECIPE_TYPE_LABELS } from "../utils.js";
 import { analyzeMealPhoto, fileToBase64 } from "../claude.js";
 import { dbGetAll, dbPut } from "../cloud.js";
 
@@ -12,6 +12,11 @@ export async function render(container) {
 
   function renderForm() {
     const nameInput = h("input", { type: "text", class: "text-input", value: current.name });
+    const typeSelect = h(
+      "select",
+      { class: "text-input" },
+      RECIPE_TYPES.map((t) => h("option", { value: t, selected: (current.type || "plat_complet") === t ? "selected" : null }, RECIPE_TYPE_LABELS[t]))
+    );
     const ingredientsInput = h("input", {
       type: "text",
       class: "text-input",
@@ -36,9 +41,10 @@ export async function render(container) {
           if (existing) {
             existing.frequency = (existing.frequency || 1) + 1;
             existing.ingredients = ingredients;
+            existing.type = typeSelect.value;
             await dbPut("recipes", existing);
           } else {
-            await dbPut("recipes", { name, ingredients, frequency: 1, source: "photo" });
+            await dbPut("recipes", { name, type: typeSelect.value, ingredients, frequency: 1, source: "photo" });
           }
           statusEl.textContent = "Recette ajoutée à la bibliothèque.";
           resultEl.innerHTML = "";
@@ -53,6 +59,8 @@ export async function render(container) {
         h("h2", {}, "Plat détecté — valide ou corrige"),
         h("label", {}, "Nom du plat"),
         nameInput,
+        h("label", {}, "Type de plat"),
+        typeSelect,
         h("label", {}, "Ingrédients"),
         ingredientsInput,
         saveBtn,

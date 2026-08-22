@@ -27,6 +27,13 @@ export const DIET_LABELS = {
 export const PORTIONS = ["enfant", "ado", "adulte"];
 export const PORTION_LABELS = { enfant: "Enfant", ado: "Ado", adulte: "Adulte" };
 
+export const RECIPE_TYPES = ["proteine", "accompagnement", "plat_complet"];
+export const RECIPE_TYPE_LABELS = {
+  proteine: "Protéine",
+  accompagnement: "Accompagnement",
+  plat_complet: "Plat complet",
+};
+
 export function h(tag, attrs = {}, children = []) {
   const el = document.createElement(tag);
   for (const [key, value] of Object.entries(attrs || {})) {
