@@ -1,6 +1,11 @@
 import { h, mount, DAY_LABELS, MEAL_LABELS } from "../utils.js";
 import { dbGetAll, dbGet, dbPut } from "../cloud.js";
-import { analyzeFridgePhoto, generateWeeklyMenu, fileToBase64 } from "../claude.js";
+import { generateWeeklyMenu } from "../claude.js";
+
+function formatDate(iso) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
+}
 
 async function renderCurrentMenuPreview(container) {
   const menu = await dbGet("menu", "current");
@@ -11,84 +16,88 @@ async function renderCurrentMenuPreview(container) {
   const preview = menu.slots.slice(0, 4).map((s) =>
     h("div", { class: "slot-preview" }, `${DAY_LABELS[s.day] || s.day} · ${MEAL_LABELS[s.meal] || s.meal} — ${s.recipeName}`)
   );
+  const genDate = formatDate(menu.generatedAt);
   mount(
     container,
     h("div", {}, [
+      genDate ? h("p", { class: "hint" }, `Générée le ${genDate}`) : null,
       ...preview,
       h("a", { href: "#/menu", class: "btn-link" }, "Voir le menu complet →"),
     ])
   );
 }
 
+async function renderShoppingListPreview(container) {
+  const list = await dbGet("shoppingList", "current");
+  if (!list || !list.items || !list.items.length) {
+    mount(container, h("p", { class: "hint" }, "Aucune liste de courses pour l'instant."));
+    return;
+  }
+  const genDate = formatDate(list.generatedAt);
+  const checkedCount = list.items.filter((i) => i.checked).length;
+  mount(
+    container,
+    h("div", {}, [
+      genDate ? h("p", { class: "hint" }, `Générée le ${genDate}`) : null,
+      h("p", {}, `${checkedCount} / ${list.items.length} articles cochés`),
+      h("a", { href: "#/shopping-list", class: "btn-link" }, "Voir la liste de courses →"),
+    ])
+  );
+}
+
 export async function render(container) {
   const menuPreviewEl = h("div");
-  const genStatusEl = h("p", { class: "hint" });
-  const fridgeInput = h("input", { type: "file", accept: "image/*", capture: "environment", style: "display:none" });
-  const genSection = h("div");
+  const shoppingPreviewEl = h("div");
+  const genStatusEl = h("pre", { class: "error-box" });
 
-  await renderCurrentMenuPreview(menuPreviewEl);
-
-  fridgeInput.addEventListener("change", async () => {
-    const file = fridgeInput.files[0];
-    if (!file) return;
-    genStatusEl.textContent = "Analyse du frigo en cours...";
-    try {
-      const base64 = await fileToBase64(file);
-      const fridgeStock = await analyzeFridgePhoto(base64, file.type || "image/jpeg");
-
-      genStatusEl.textContent = "Génération du menu de la semaine (peut prendre quelques secondes)...";
-      const [recipes, purchases, members, weeklyPattern] = await Promise.all([
-        dbGetAll("recipes"),
-        dbGetAll("purchases"),
-        dbGetAll("members"),
-        dbGet("weeklyPattern", "default"),
-      ]);
-      const recentPurchases = purchases.slice(-10);
-
-      const result = await generateWeeklyMenu({
-        recipes,
-        purchaseHistory: recentPurchases,
-        fridgeStock,
-        weeklyPattern: weeklyPattern || { grid: {} },
-        members,
-      });
-
-      await dbPut("menu", { id: "current", slots: result.slots || [], generatedAt: new Date().toISOString() });
-      await dbPut("shoppingList", { id: "current", items: [], generatedAt: null });
-
-      genStatusEl.textContent = "Menu généré !";
-      location.hash = "#/menu";
-    } catch (err) {
-      genStatusEl.textContent = "Erreur : " + err.message;
-    }
-  });
+  await Promise.all([renderCurrentMenuPreview(menuPreviewEl), renderShoppingListPreview(shoppingPreviewEl)]);
 
   const generateBtn = h(
     "button",
     {
       class: "btn-primary btn-large",
-      onclick: () => fridgeInput.click(),
-    },
-    "📷 Générer le menu de la semaine"
-  );
+      onclick: async () => {
+        generateBtn.disabled = true;
+        genStatusEl.textContent = "Génération du menu de la semaine (peut prendre quelques secondes)...";
+        try {
+          const [recipes, members, weeklyPattern] = await Promise.all([
+            dbGetAll("recipes"),
+            dbGetAll("members"),
+            dbGet("weeklyPattern", "default"),
+          ]);
 
-  mount(
-    genSection,
-    h("div", { class: "card" }, [
-      h("h2", {}, "Nouveau menu"),
-      h("p", { class: "hint" }, "Prends une photo de ton frigo pour démarrer."),
-      generateBtn,
-      fridgeInput,
-      genStatusEl,
-    ])
+          const result = await generateWeeklyMenu({
+            recipes,
+            weeklyPattern: weeklyPattern || { grid: {} },
+            members,
+          });
+
+          await dbPut("menu", { id: "current", slots: result.slots || [], generatedAt: new Date().toISOString() });
+
+          genStatusEl.textContent = "Menu généré !";
+          location.hash = "#/menu";
+        } catch (err) {
+          genStatusEl.textContent = "Erreur : " + err.message;
+        } finally {
+          generateBtn.disabled = false;
+        }
+      },
+    },
+    "🍽️ Générer le menu de la semaine"
   );
 
   mount(
     container,
     h("section", { class: "screen" }, [
       h("h1", {}, "Menu Famille"),
-      genSection,
+      h("div", { class: "card" }, [
+        h("h2", {}, "Nouveau menu"),
+        h("p", { class: "hint" }, "Génère un menu complet de la semaine à partir de tes recettes habituelles et des contraintes du foyer."),
+        generateBtn,
+        genStatusEl,
+      ]),
       h("div", { class: "card" }, [h("h2", {}, "Menu en cours"), menuPreviewEl]),
+      h("div", { class: "card" }, [h("h2", {}, "Liste de courses"), shoppingPreviewEl]),
       h("div", { class: "card shortcuts" }, [
         h("h2", {}, "Ajouter des données"),
         h("a", { href: "#/add-receipt", class: "btn-secondary" }, "🧾 Ajouter un ticket de courses"),

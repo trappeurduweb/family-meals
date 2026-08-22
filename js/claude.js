@@ -90,20 +90,7 @@ export async function analyzeMealPhoto(imageBase64, imageMediaType) {
   return extractJson(text);
 }
 
-export async function analyzeFridgePhoto(imageBase64, imageMediaType) {
-  const text = await callClaude({
-    system:
-      "Tu estimes le niveau de stock d'un frigo/placard à partir d'une photo, en catégories approximatives. " +
-      'Réponds UNIQUEMENT avec un JSON de la forme {"stock": [{"category": string, "level": "beaucoup"|"un_peu"|"plus_du_tout"}]}. ' +
-      "category doit être une des valeurs: fruits_legumes, cremerie, viande_poisson, epicerie, surgele, boulangerie, autre.",
-    userText: "Estime le niveau de stock visible sur cette photo.",
-    imageBase64,
-    imageMediaType,
-  });
-  return extractJson(text);
-}
-
-export async function generateWeeklyMenu({ recipes, purchaseHistory, fridgeStock, weeklyPattern, members }) {
+export async function generateWeeklyMenu({ recipes, weeklyPattern, members }) {
   const text = await callClaude({
     system:
       "Tu es un assistant qui planifie les repas d'une famille française pour la semaine (déjeuners + dîners). " +
@@ -111,12 +98,11 @@ export async function generateWeeklyMenu({ recipes, purchaseHistory, fridgeStock
       "(régime, aliments non aimés, portions) et de qui est présent à chaque repas. " +
       "Ajoute 1 à 2 suggestions de recettes nouvelles inspirées des goûts de la famille (pas seulement des variantes). " +
       "Tu peux proposer un même plat en \"restes\" sur 2 créneaux consécutifs si cela réduit la charge de cuisine. " +
-      "Tiens compte du stock du frigo pour éviter de sur-acheter ce qui est déjà présent. " +
       'Réponds UNIQUEMENT avec un JSON de la forme {"slots": [{"day": "lun".."dim", "meal": "dejeuner"|"diner", ' +
       '"recipeName": string, "isNewSuggestion": boolean, "isLeftoverOf": string|null, ' +
       '"ingredients": [{"name": string, "qty": number, "unit": string, "aisle": string}]}]}. ' +
       "aisle doit être une des valeurs: fruits_legumes, cremerie, viande_poisson, epicerie, surgele, boulangerie, autre.",
-    userText: JSON.stringify({ recipes, purchaseHistory, fridgeStock, weeklyPattern, members }),
+    userText: JSON.stringify({ recipes, weeklyPattern, members }),
     maxTokens: 8192,
   });
   return extractJson(text);

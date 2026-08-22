@@ -50,7 +50,21 @@ html, body {
   color: var(--text-muted);
   font-size: 13px;
   margin: 4px 0;
+  overflow-wrap: anywhere;
 }
+
+.error-box {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  color: var(--danger);
+  font-size: 13px;
+  margin: 8px 0 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.error-box:empty { display: none; }
 
 label {
   display: block;

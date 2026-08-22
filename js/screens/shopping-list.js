@@ -1,6 +1,11 @@
 import { h, mount, AISLES, AISLE_LABELS } from "../utils.js";
 import { dbGet, dbPut } from "../cloud.js";
 
+function formatDate(iso) {
+  if (!iso) return null;
+  return new Date(iso).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
+}
+
 export async function render(container) {
   let list = await dbGet("shoppingList", "current");
   if (!list) list = { id: "current", items: [] };
@@ -101,11 +106,15 @@ export async function render(container) {
       addBtn,
     ]);
 
+    const genDate = formatDate(list.generatedAt);
+    const dateHint = genDate ? h("p", { class: "hint" }, `Générée le ${genDate}`) : null;
+
     if (!list.items.length) {
       mount(
         container,
         h("section", { class: "screen" }, [
           h("h1", {}, "Liste de courses"),
+          dateHint,
           h("p", { class: "hint" }, "Liste vide. Génère-la depuis l'écran Menu, ou ajoute un article manuellement."),
           addCard,
         ])
@@ -113,7 +122,7 @@ export async function render(container) {
       return;
     }
 
-    mount(container, h("section", { class: "screen" }, [h("h1", {}, "Liste de courses"), ...sections, addCard]));
+    mount(container, h("section", { class: "screen" }, [h("h1", {}, "Liste de courses"), dateHint, ...sections, addCard]));
   }
 
   renderScreen();

@@ -64,7 +64,7 @@ export async function render(container) {
         h(
           "p",
           { class: "hint" },
-          "Nécessaire pour analyser tes photos (tickets, frigo, plats) et générer le menu. Stockée uniquement sur cet appareil — jamais envoyée à la base partagée. Chaque membre du foyer doit renseigner sa propre clé."
+          "Nécessaire pour analyser tes photos (tickets, plats) et générer le menu. Stockée uniquement sur cet appareil — jamais envoyée à la base partagée. Chaque membre du foyer doit renseigner sa propre clé."
         ),
         input,
         saveBtn,
