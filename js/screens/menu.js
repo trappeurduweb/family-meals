@@ -1,5 +1,5 @@
 import { h, mount, DAY_LABELS, MEAL_LABELS, RECIPE_TYPE_LABELS, formatSlotDate } from "../utils.js";
-import { dbGet, dbPut } from "../cloud.js";
+import { dbGet, dbGetAll, dbPut } from "../cloud.js";
 
 function aggregateShoppingList(slots) {
   const byKey = new Map();
@@ -26,7 +26,7 @@ function getDishes(slot) {
 }
 
 export async function render(container) {
-  const menu = await dbGet("menu", "current");
+  const [menu, recipes] = await Promise.all([dbGet("menu", "current"), dbGetAll("recipes")]);
 
   if (!menu || !menu.slots || !menu.slots.length) {
     mount(
@@ -34,6 +34,27 @@ export async function render(container) {
       h("section", { class: "screen" }, [h("h1", {}, "Menu de la semaine"), h("p", { class: "hint" }, "Aucun menu généré. Retourne à l'accueil pour en générer un.")])
     );
     return;
+  }
+
+  const recipesByType = new Map();
+  for (const r of recipes) {
+    const type = r.type || "plat_complet";
+    if (!recipesByType.has(type)) recipesByType.set(type, []);
+    recipesByType.get(type).push(r);
+  }
+
+  async function validateDish(slot, dish) {
+    const isSingleDish = slot.dishes.length === 1;
+    await dbPut("recipes", {
+      name: dish.recipeName,
+      type: dish.type,
+      ingredients: isSingleDish ? slot.ingredients || [] : [],
+      frequency: 1,
+      source: "menu_suggestion",
+    });
+    dish.isNewSuggestion = false;
+    await dbPut("menu", menu);
+    await render(container);
   }
 
   const grid = h("div", { class: "menu-grid" });
@@ -56,20 +77,42 @@ export async function render(container) {
     }
 
     const dishRows = dishes.map((dish) => {
-      const nameInput = h("input", {
-        type: "text",
-        class: "text-input",
-        value: dish.recipeName,
-        oninput: async (e) => {
-          dish.recipeName = e.target.value;
-          await dbPut("menu", menu);
+      const options = [];
+      if (dish.isNewSuggestion) {
+        options.push({ value: dish.recipeName, label: `${dish.recipeName} (nouveauté IA, non enregistrée)` });
+      }
+      for (const r of recipesByType.get(dish.type) || []) {
+        if (dish.isNewSuggestion && r.name === dish.recipeName) continue;
+        options.push({ value: r.name, label: r.name });
+      }
+      if (!dish.isNewSuggestion && !options.some((o) => o.value === dish.recipeName)) {
+        // Recette du menu introuvable dans la bibliothèque (ex: recette supprimée depuis) : on la garde sélectionnable.
+        options.unshift({ value: dish.recipeName, label: `${dish.recipeName} (introuvable dans les recettes)` });
+      }
+
+      const select = h(
+        "select",
+        {
+          class: "text-input",
+          onchange: async (e) => {
+            dish.recipeName = e.target.value;
+            dish.isNewSuggestion = false;
+            await dbPut("menu", menu);
+          },
         },
-      });
+        options.map((o) => h("option", { value: o.value, selected: o.value === dish.recipeName ? "selected" : null }, o.label))
+      );
+
+      const validateBtn = dish.isNewSuggestion
+        ? h("button", { class: "btn-link", onclick: () => validateDish(slot, dish) }, "Ajouter aux recettes")
+        : null;
+
       return h("div", { class: "menu-dish-row" }, [
         h("span", { class: "badge badge-type" }, RECIPE_TYPE_LABELS[dish.type] || RECIPE_TYPE_LABELS.plat_complet),
-        nameInput,
+        select,
         dish.isNewSuggestion ? h("span", { class: "badge" }, "Nouveauté") : null,
         dish.isLeftoverOf ? h("span", { class: "badge" }, "Restes") : null,
+        validateBtn,
       ]);
     });
 
