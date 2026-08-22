@@ -1,4 +1,4 @@
-import { h, mount, DAY_LABELS, MEAL_LABELS } from "../utils.js";
+import { h, mount, DAY_LABELS, MEAL_LABELS, getUpcomingSlots, filterSlotsByPresence, formatSlotDate } from "../utils.js";
 import { dbGetAll, dbGet, dbPut } from "../cloud.js";
 import { generateWeeklyMenu } from "../claude.js";
 
@@ -7,15 +7,21 @@ function formatDate(iso) {
   return new Date(iso).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" });
 }
 
+function slotDishesLabel(slot) {
+  if (slot.dishes && slot.dishes.length) return slot.dishes.map((d) => d.recipeName).join(" + ");
+  return slot.recipeName || "";
+}
+
 async function renderCurrentMenuPreview(container) {
   const menu = await dbGet("menu", "current");
   if (!menu || !menu.slots || !menu.slots.length) {
     mount(container, h("p", { class: "hint" }, "Aucun menu généré pour l'instant."));
     return;
   }
-  const preview = menu.slots.slice(0, 4).map((s) =>
-    h("div", { class: "slot-preview" }, `${DAY_LABELS[s.day] || s.day} · ${MEAL_LABELS[s.meal] || s.meal} — ${s.recipeName}`)
-  );
+  const preview = menu.slots.slice(0, 4).map((s) => {
+    const label = s.date ? formatSlotDate(s.date) : DAY_LABELS[s.day] || s.day;
+    return h("div", { class: "slot-preview" }, `${label} · ${MEAL_LABELS[s.meal] || s.meal} — ${slotDishesLabel(s)}`);
+  });
   const genDate = formatDate(menu.generated_at);
   mount(
     container,
@@ -58,7 +64,7 @@ export async function render(container) {
       class: "btn-primary btn-large",
       onclick: async () => {
         generateBtn.disabled = true;
-        genStatusEl.textContent = "Génération du menu de la semaine (peut prendre quelques secondes)...";
+        genStatusEl.textContent = "";
         try {
           const [recipes, members, weeklyPattern] = await Promise.all([
             dbGetAll("recipes"),
@@ -66,13 +72,32 @@ export async function render(container) {
             dbGet("weeklyPattern", "default"),
           ]);
 
+          const memberIds = members.map((m) => m.id);
+          const targetSlots = filterSlotsByPresence(getUpcomingSlots(14), weeklyPattern || { grid: {} }, memberIds);
+
+          if (!targetSlots.length) {
+            genStatusEl.textContent = "Personne du foyer n'est prévu à la maison pour un repas prochainement : aucun menu à générer.";
+            return;
+          }
+
+          genStatusEl.textContent = "Génération du menu (peut prendre quelques secondes)...";
+
           const result = await generateWeeklyMenu({
             recipes,
             weeklyPattern: weeklyPattern || { grid: {} },
             members,
+            targetSlots: targetSlots.map(({ day, meal }) => ({ day, meal })),
           });
 
-          await dbPut("menu", { id: "current", slots: result.slots || [], generated_at: new Date().toISOString() });
+          const byKey = new Map((result.slots || []).map((s) => [`${s.day}_${s.meal}`, s]));
+          const orderedSlots = targetSlots
+            .map((t) => {
+              const match = byKey.get(`${t.day}_${t.meal}`);
+              return match ? { ...match, date: t.date } : null;
+            })
+            .filter(Boolean);
+
+          await dbPut("menu", { id: "current", slots: orderedSlots, generated_at: new Date().toISOString() });
 
           genStatusEl.textContent = "Menu généré !";
           location.hash = "#/menu";
@@ -83,7 +108,7 @@ export async function render(container) {
         }
       },
     },
-    "🍽️ Générer le menu de la semaine"
+    "🍽️ Générer le menu"
   );
 
   mount(
@@ -92,7 +117,7 @@ export async function render(container) {
       h("h1", {}, "Menu Famille"),
       h("div", { class: "card" }, [
         h("h2", {}, "Nouveau menu"),
-        h("p", { class: "hint" }, "Génère un menu complet de la semaine à partir de tes recettes habituelles et des contraintes du foyer."),
+        h("p", { class: "hint" }, "Génère le menu à partir du prochain repas, en fonction de tes recettes habituelles et des contraintes du foyer."),
         generateBtn,
         genStatusEl,
       ]),

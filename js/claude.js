@@ -94,10 +94,13 @@ export async function analyzeMealPhoto(imageBase64, imageMediaType) {
   return extractJson(text);
 }
 
-export async function generateWeeklyMenu({ recipes, weeklyPattern, members }) {
+export async function generateWeeklyMenu({ recipes, weeklyPattern, members, targetSlots }) {
   const text = await callClaude({
     system:
-      "Tu es un assistant qui planifie les repas d'une famille française pour la semaine (déjeuners + dîners). " +
+      "Tu es un assistant qui planifie les repas d'une famille française. " +
+      "targetSlots contient la liste EXACTE des créneaux (jour, repas) à planifier, dans l'ordre chronologique réel " +
+      "(le premier créneau de la liste est le tout prochain repas de la famille). " +
+      "Tu dois générer un plat pour CHAQUE créneau de targetSlots, et UNIQUEMENT ceux-là — n'en ajoute aucun autre et n'en oublie aucun. " +
       "Repars en priorité des recettes habituelles fournies, en tenant compte des contraintes de chaque membre " +
       "(régime, aliments non aimés, portions) et de qui est présent à chaque repas. " +
       "Chaque recette fournie a un type: \"proteine\", \"accompagnement\" ou \"plat_complet\". " +
@@ -114,7 +117,7 @@ export async function generateWeeklyMenu({ recipes, weeklyPattern, members }) {
       "dishes contient soit 1 élément (plat_complet), soit 2 éléments (une proteine + un accompagnement). " +
       "ingredients contient la liste combinée de tous les ingrédients nécessaires pour l'ensemble du repas de ce créneau. " +
       "aisle doit être une des valeurs: fruits_legumes, cremerie, viande_poisson, epicerie, surgele, boulangerie, autre.",
-    userText: JSON.stringify({ recipes, weeklyPattern, members }),
+    userText: JSON.stringify({ recipes, weeklyPattern, members, targetSlots }),
     maxTokens: 8192,
   });
   return extractJson(text);
