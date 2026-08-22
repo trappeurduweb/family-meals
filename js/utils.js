@@ -34,19 +34,19 @@ export const RECIPE_TYPE_LABELS = {
   plat_complet: "Plat complet",
 };
 
+export const SHOPPING_TIME_SLOTS = ["matin", "aprem"];
+export const SHOPPING_TIME_SLOT_LABELS = { matin: "Matin", aprem: "Après-midi" };
+const SHOPPING_TIME_SLOT_TO_MEAL = { matin: "dejeuner", aprem: "diner" };
+
+export function shoppingSlotToMeal(timeSlot) {
+  return SHOPPING_TIME_SLOT_TO_MEAL[timeSlot] || "dejeuner";
+}
+
 const WEEKDAY_EN_TO_KEY = { Mon: "lun", Tue: "mar", Wed: "mer", Thu: "jeu", Fri: "ven", Sat: "sam", Sun: "dim" };
 
-function getParisNowParts() {
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Europe/Paris",
-    weekday: "short",
-    hour: "numeric",
-    hourCycle: "h23",
-  });
-  const parts = fmt.formatToParts(new Date());
-  const weekday = parts.find((p) => p.type === "weekday").value;
-  const hour = Number(parts.find((p) => p.type === "hour").value);
-  return { dayKey: WEEKDAY_EN_TO_KEY[weekday], hour };
+export function getParisTodayDayKey() {
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", weekday: "short" });
+  return WEEKDAY_EN_TO_KEY[fmt.format(new Date())];
 }
 
 function getParisTodayDate() {
@@ -54,28 +54,31 @@ function getParisTodayDate() {
   return new Date(fmt.format(new Date()) + "T12:00:00");
 }
 
-// Construit la liste ordonnée des prochains créneaux (jour, repas), en
-// commençant par le prochain repas réel (avant midi -> déjeuner du jour,
-// après midi -> dîner du jour, heure de Paris), et en tournant sur une
-// semaine complète (14 créneaux par défaut).
-export function getUpcomingSlots(count = 14) {
-  const { dayKey, hour } = getParisNowParts();
+// Construit la liste ordonnée des créneaux (jour, repas) en partant du jour
+// de courses choisi par l'utilisateur (prochaine occurrence de ce jour de la
+// semaine à partir d'aujourd'hui) et du repas correspondant au moment choisi
+// (matin -> déjeuner du jour, après-midi -> dîner du jour), puis en tournant
+// sur une semaine complète (14 créneaux par défaut).
+export function getSlotsStartingAt(dayKey, meal, count = 14) {
+  const todayIndex = DAYS.indexOf(getParisTodayDayKey());
   const startDayIndex = DAYS.indexOf(dayKey);
-  const startMealIndex = hour < 12 ? 0 : 1;
-  const startDate = getParisTodayDate();
+  const offsetToStart = (startDayIndex - todayIndex + DAYS.length) % DAYS.length;
+  const baseDate = getParisTodayDate();
+  const startMealIndex = MEALS.indexOf(meal);
 
   const slots = [];
-  let dayOffset = 0;
-  let mealIndex = startMealIndex;
+  let dIdx = startDayIndex;
+  let mIdx = startMealIndex;
+  let offset = offsetToStart;
   for (let i = 0; i < count; i++) {
-    const dayIndex = (startDayIndex + dayOffset) % DAYS.length;
-    const date = new Date(startDate);
-    date.setDate(date.getDate() + dayOffset);
-    slots.push({ day: DAYS[dayIndex], meal: MEALS[mealIndex], date: date.toISOString().slice(0, 10) });
-    mealIndex++;
-    if (mealIndex >= MEALS.length) {
-      mealIndex = 0;
-      dayOffset++;
+    const date = new Date(baseDate);
+    date.setDate(date.getDate() + offset);
+    slots.push({ day: DAYS[dIdx], meal: MEALS[mIdx], date: date.toISOString().slice(0, 10) });
+    mIdx++;
+    if (mIdx >= MEALS.length) {
+      mIdx = 0;
+      dIdx = (dIdx + 1) % DAYS.length;
+      offset++;
     }
   }
   return slots;

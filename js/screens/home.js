@@ -1,4 +1,17 @@
-import { h, mount, DAY_LABELS, MEAL_LABELS, getUpcomingSlots, filterSlotsByPresence, formatSlotDate } from "../utils.js";
+import {
+  h,
+  mount,
+  DAYS,
+  DAY_LABELS,
+  MEAL_LABELS,
+  SHOPPING_TIME_SLOTS,
+  SHOPPING_TIME_SLOT_LABELS,
+  shoppingSlotToMeal,
+  getSlotsStartingAt,
+  filterSlotsByPresence,
+  formatSlotDate,
+  getParisTodayDayKey,
+} from "../utils.js";
 import { dbGetAll, dbGet, dbPut } from "../cloud.js";
 import { generateWeeklyMenu } from "../claude.js";
 
@@ -58,6 +71,17 @@ export async function render(container) {
 
   await Promise.all([renderCurrentMenuPreview(menuPreviewEl), renderShoppingListPreview(shoppingPreviewEl)]);
 
+  const daySelect = h(
+    "select",
+    { class: "text-input" },
+    DAYS.map((d) => h("option", { value: d, selected: d === getParisTodayDayKey() ? "selected" : null }, DAY_LABELS[d]))
+  );
+  const timeSelect = h(
+    "select",
+    { class: "text-input" },
+    SHOPPING_TIME_SLOTS.map((t) => h("option", { value: t }, SHOPPING_TIME_SLOT_LABELS[t]))
+  );
+
   const generateBtn = h(
     "button",
     {
@@ -72,11 +96,16 @@ export async function render(container) {
             dbGet("weeklyPattern", "default"),
           ]);
 
+          const startMeal = shoppingSlotToMeal(timeSelect.value);
           const memberIds = members.map((m) => m.id);
-          const targetSlots = filterSlotsByPresence(getUpcomingSlots(14), weeklyPattern || { grid: {} }, memberIds);
+          const targetSlots = filterSlotsByPresence(
+            getSlotsStartingAt(daySelect.value, startMeal, 14),
+            weeklyPattern || { grid: {} },
+            memberIds
+          );
 
           if (!targetSlots.length) {
-            genStatusEl.textContent = "Personne du foyer n'est prévu à la maison pour un repas prochainement : aucun menu à générer.";
+            genStatusEl.textContent = "Personne du foyer n'est prévu à la maison pour un repas sur cette période : aucun menu à générer.";
             return;
           }
 
@@ -117,7 +146,12 @@ export async function render(container) {
       h("h1", {}, "Menu Famille"),
       h("div", { class: "card" }, [
         h("h2", {}, "Nouveau menu"),
-        h("p", { class: "hint" }, "Génère le menu à partir du prochain repas, en fonction de tes recettes habituelles et des contraintes du foyer."),
+        h("p", { class: "hint" }, "Quand comptes-tu faire les courses ? Le menu démarrera à partir de ce moment-là."),
+        h("label", {}, "Jour des courses"),
+        daySelect,
+        h("label", {}, "Moment"),
+        timeSelect,
+        h("p", { class: "hint" }, "Matin → le menu commence au déjeuner de ce jour. Après-midi → il commence au dîner."),
         generateBtn,
         genStatusEl,
       ]),
