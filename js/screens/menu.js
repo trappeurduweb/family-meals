@@ -62,7 +62,7 @@ export async function render(container) {
       class: "btn-primary btn-large",
       onclick: async () => {
         const items = aggregateShoppingList(menu.slots);
-        await dbPut("shoppingList", { id: "current", items, generatedAt: new Date().toISOString() });
+        await dbPut("shoppingList", { id: "current", items, generated_at: new Date().toISOString() });
         location.hash = "#/shopping-list";
       },
     },

@@ -16,7 +16,7 @@ async function renderCurrentMenuPreview(container) {
   const preview = menu.slots.slice(0, 4).map((s) =>
     h("div", { class: "slot-preview" }, `${DAY_LABELS[s.day] || s.day} · ${MEAL_LABELS[s.meal] || s.meal} — ${s.recipeName}`)
   );
-  const genDate = formatDate(menu.generatedAt);
+  const genDate = formatDate(menu.generated_at);
   mount(
     container,
     h("div", {}, [
@@ -33,7 +33,7 @@ async function renderShoppingListPreview(container) {
     mount(container, h("p", { class: "hint" }, "Aucune liste de courses pour l'instant."));
     return;
   }
-  const genDate = formatDate(list.generatedAt);
+  const genDate = formatDate(list.generated_at);
   const checkedCount = list.items.filter((i) => i.checked).length;
   mount(
     container,
@@ -72,7 +72,7 @@ export async function render(container) {
             members,
           });
 
-          await dbPut("menu", { id: "current", slots: result.slots || [], generatedAt: new Date().toISOString() });
+          await dbPut("menu", { id: "current", slots: result.slots || [], generated_at: new Date().toISOString() });
 
           genStatusEl.textContent = "Menu généré !";
           location.hash = "#/menu";

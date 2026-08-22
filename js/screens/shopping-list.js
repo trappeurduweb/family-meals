@@ -106,7 +106,7 @@ export async function render(container) {
       addBtn,
     ]);
 
-    const genDate = formatDate(list.generatedAt);
+    const genDate = formatDate(list.generated_at);
     const dateHint = genDate ? h("p", { class: "hint" }, `Générée le ${genDate}`) : null;
 
     if (!list.items.length) {
