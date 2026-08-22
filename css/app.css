@@ -156,8 +156,10 @@ label {
 .meal-label { width: 70px; font-size: 13px; color: var(--text-muted); flex-shrink: 0; }
 .menu-slot .text-input { flex: 1; margin-bottom: 0; min-width: 120px; }
 
-.shopping-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+.shopping-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 15px; flex-wrap: nowrap; }
 .shopping-item.checked { color: var(--text-muted); text-decoration: line-through; }
+.shopping-item-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.shopping-item .text-input.small { flex: 0 0 52px; width: 52px; margin-bottom: 0; padding: 6px 8px; }
 
 .loading { padding: 40px 0; text-align: center; color: var(--text-muted); }
 
