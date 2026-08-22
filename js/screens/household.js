@@ -5,7 +5,7 @@ function slotKey(day, meal) {
   return `${day}_${meal}`;
 }
 
-function memberForm(existing, onSave) {
+function memberForm(existing, onSave, onCancel) {
   const name = h("input", { type: "text", class: "text-input", placeholder: "Prénom", value: existing?.name || "" });
   const diet = h(
     "select",
@@ -44,7 +44,7 @@ function memberForm(existing, onSave) {
     existing ? "Mettre à jour" : "Ajouter"
   );
 
-  return h("div", { class: "card" }, [
+  const children = [
     h("h3", {}, existing ? `Modifier ${existing.name}` : "Ajouter un membre"),
     h("label", {}, "Prénom"),
     name,
@@ -55,10 +55,16 @@ function memberForm(existing, onSave) {
     h("label", {}, "Portion"),
     portion,
     saveBtn,
-  ]);
+  ];
+
+  if (existing && onCancel) {
+    children.push(h("button", { class: "btn-secondary", onclick: onCancel }, "Annuler"));
+  }
+
+  return h("div", { class: "card" }, children);
 }
 
-async function renderMembersList(container, refresh) {
+async function renderMembersList(container, refresh, onEdit) {
   const members = await dbGetAll("members");
   const list = h(
     "div",
@@ -66,17 +72,27 @@ async function renderMembersList(container, refresh) {
     members.map((m) =>
       h("div", { class: "member-row" }, [
         h("div", {}, [h("strong", {}, m.name), h("span", { class: "hint" }, ` — ${m.diet}, ${m.portion}`)]),
-        h(
-          "button",
-          {
-            class: "btn-link-danger",
-            onclick: async () => {
-              await dbDelete("members", m.id);
-              refresh();
+        h("div", {}, [
+          h(
+            "button",
+            {
+              class: "btn-link",
+              onclick: () => onEdit(m),
             },
-          },
-          "Supprimer"
-        ),
+            "Modifier"
+          ),
+          h(
+            "button",
+            {
+              class: "btn-link-danger",
+              onclick: async () => {
+                await dbDelete("members", m.id);
+                refresh();
+              },
+            },
+            "Supprimer"
+          ),
+        ]),
       ])
     )
   );
@@ -128,10 +144,27 @@ export async function render(container) {
   const formEl = h("div");
   const patternEl = h("div");
 
-  async function refresh() {
-    await renderMembersList(membersListEl, refresh);
-    const members = await dbGetAll("members");
+  function showAddForm() {
     mount(formEl, memberForm(null, refresh));
+  }
+
+  function showEditForm(member) {
+    mount(
+      formEl,
+      memberForm(
+        member,
+        async () => {
+          await refresh();
+        },
+        showAddForm
+      )
+    );
+  }
+
+  async function refresh() {
+    await renderMembersList(membersListEl, refresh, showEditForm);
+    const members = await dbGetAll("members");
+    showAddForm();
     await renderWeeklyPattern(patternEl, members);
   }
 

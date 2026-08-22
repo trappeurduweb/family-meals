@@ -13,7 +13,42 @@ function parseIngredientsInput(text) {
     .map((s) => ({ name: s, qty: 1, unit: "" }));
 }
 
-async function renderList(container, refresh) {
+function recipeForm(existing, onSave, onCancel) {
+  const nameInput = h("input", { type: "text", class: "text-input", placeholder: "Nom de la recette", value: existing?.name || "" });
+  const ingredientsInput = h("input", {
+    type: "text",
+    class: "text-input",
+    placeholder: "Ingrédients séparés par des virgules",
+    value: (existing?.ingredients || []).map((i) => i.name).join(", "),
+  });
+
+  const saveBtn = h(
+    "button",
+    {
+      class: "btn-primary",
+      onclick: async () => {
+        if (!nameInput.value.trim()) return;
+        await dbPut("recipes", {
+          ...(existing || { frequency: 1, source: "manual" }),
+          name: nameInput.value.trim(),
+          ingredients: parseIngredientsInput(ingredientsInput.value),
+        });
+        onSave();
+      },
+    },
+    existing ? "Mettre à jour" : "Ajouter la recette"
+  );
+
+  const children = [h("h2", {}, existing ? `Modifier "${existing.name}"` : "Ajout manuel"), nameInput, ingredientsInput, saveBtn];
+
+  if (existing && onCancel) {
+    children.push(h("button", { class: "btn-secondary", onclick: onCancel }, "Annuler"));
+  }
+
+  return h("div", { class: "card" }, children);
+}
+
+async function renderList(container, refresh, onEdit) {
   const recipes = await dbGetAll("recipes");
   recipes.sort((a, b) => (b.frequency || 0) - (a.frequency || 0));
 
@@ -34,18 +69,21 @@ async function renderList(container, refresh) {
             h("span", { class: "badge" }, `×${r.frequency || 1}`),
           ]),
           h("p", { class: "hint" }, ingredientsToText(r.ingredients) || "Pas d'ingrédients détaillés"),
-          h(
-            "button",
-            {
-              class: "btn-link-danger",
-              onclick: async () => {
-                if (!confirm(`Supprimer la recette "${r.name}" ?`)) return;
-                await dbDelete("recipes", r.id);
-                refresh();
+          h("div", {}, [
+            h("button", { class: "btn-link", onclick: () => onEdit(r) }, "Modifier"),
+            h(
+              "button",
+              {
+                class: "btn-link-danger",
+                onclick: async () => {
+                  if (!confirm(`Supprimer la recette "${r.name}" ?`)) return;
+                  await dbDelete("recipes", r.id);
+                  refresh();
+                },
               },
-            },
-            "Supprimer"
-          ),
+              "Supprimer"
+            ),
+          ]),
         ])
       )
     )
@@ -54,41 +92,24 @@ async function renderList(container, refresh) {
 
 export async function render(container) {
   const listEl = h("div");
+  const formEl = h("div");
 
-  const nameInput = h("input", { type: "text", class: "text-input", placeholder: "Nom de la recette" });
-  const ingredientsInput = h("input", { type: "text", class: "text-input", placeholder: "Ingrédients séparés par des virgules" });
-
-  async function refresh() {
-    await renderList(listEl, refresh);
+  function showAddForm() {
+    mount(formEl, recipeForm(null, refresh));
   }
 
-  const addBtn = h(
-    "button",
-    {
-      class: "btn-primary",
-      onclick: async () => {
-        if (!nameInput.value.trim()) return;
-        await dbPut("recipes", {
-          name: nameInput.value.trim(),
-          ingredients: parseIngredientsInput(ingredientsInput.value),
-          frequency: 1,
-          source: "manual",
-        });
-        nameInput.value = "";
-        ingredientsInput.value = "";
-        refresh();
-      },
-    },
-    "Ajouter la recette"
-  );
+  function showEditForm(recipe) {
+    mount(formEl, recipeForm(recipe, refresh, showAddForm));
+  }
+
+  async function refresh() {
+    await renderList(listEl, refresh, showEditForm);
+    showAddForm();
+  }
 
   mount(
     container,
-    h("section", { class: "screen" }, [
-      h("h1", {}, "Recettes habituelles"),
-      h("div", { class: "card" }, [h("h2", {}, "Ajout manuel"), nameInput, ingredientsInput, addBtn]),
-      listEl,
-    ])
+    h("section", { class: "screen" }, [h("h1", {}, "Recettes habituelles"), formEl, listEl])
   );
 
   await refresh();

@@ -48,17 +48,36 @@ export async function dbGet(store, key) {
   return rows && rows[0];
 }
 
-export async function dbPut(store, value) {
-  const isUpsert = value.id !== undefined && value.id !== null;
+async function insertRow(store, value) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${tableName(store)}`, {
     method: "POST",
-    headers: baseHeaders({
-      Prefer: isUpsert ? "resolution=merge-duplicates,return=representation" : "return=representation",
-    }),
+    headers: baseHeaders({ Prefer: "return=representation" }),
     body: JSON.stringify(value),
   });
   const rows = await handle(res);
   return rows && rows[0];
+}
+
+export async function dbPut(store, value) {
+  if (value.id === undefined || value.id === null) {
+    // Nouvelle ligne, id auto-généré par la base (colonne identity)
+    return insertRow(store, value);
+  }
+
+  // Mise à jour d'une ligne existante : PATCH par id (jamais d'insert avec id
+  // explicite, car les colonnes identity refusent une valeur imposée).
+  const { id, ...rest } = value;
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${tableName(store)}?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: baseHeaders({ Prefer: "return=representation" }),
+    body: JSON.stringify(rest),
+  });
+  const rows = await handle(res);
+  if (rows && rows.length) return rows[0];
+
+  // Aucune ligne existante avec cet id (ex: premier enregistrement de
+  // weeklyPattern/menu/shoppingList dont l'id texte est fixe) -> on l'insère.
+  return insertRow(store, value);
 }
 
 export async function dbDelete(store, key) {
